@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html
+import logging
 import re
 from decimal import Decimal
 
@@ -20,6 +22,8 @@ from models import ChatMember, Debt, Expense, User
 from services.split_amount import split_total_equally
 from services.sync_admins import sync_group_admins
 from states import ExpenseSG
+
+logger = logging.getLogger(__name__)
 
 
 class _GroupInlineCallbackFilter(BaseFilter):
@@ -99,9 +103,8 @@ async def begin_expense_participant_selection(
         title += f"\n📝 {description}"
     title += (
         "\n\nОберіть, між ким ділити суму, або «Розділити на всіх»."
-        "\n\n<i>Немає людини в списку? Нехай надішле в цю групу <code>/here</code> "
-        "(завжди доходить до бота) або будь-яке повідомлення, якщо для бота вимкнено Group Privacy. "
-        "Адмінів підтягую автоматично.</i>"
+        "\n\n<i>Немає людини в списку? Нехай надішле <code>/here</code> або повідомлення (якщо вимкнено Group Privacy), "
+        "потім натисніть <b>«Оновити список»</b>. Адмінів підтягую автоматично.</i>"
     )
     await message.reply(title, parse_mode=ParseMode.HTML, reply_markup=kb)
 
@@ -196,6 +199,27 @@ async def cb_split_all(callback: CallbackQuery, state: FSMContext, session: Asyn
     await callback.answer()
 
 
+@router.callback_query(ExpenseSG.choosing_participants, ExpRefreshMembers.filter())
+async def cb_refresh_members(callback: CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
+    data = await state.get_data()
+    if callback.from_user.id != data.get("initiator_tg_id"):
+        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        return
+    await sync_group_admins(callback.bot, session, callback.message.chat.id)
+    chat = await chat_by_tg(session, callback.message.chat.id)
+    if not chat:
+        await callback.answer("Чат не знайдено.", show_alert=True)
+        return
+    users = await _members_for_chat(session, chat.id)
+    valid_ids = {u.id for u in users}
+    cur = {int(x) for x in (data.get("selected") or [])}
+    cur &= valid_ids
+    await state.update_data(selected=list(cur))
+    kb = await _reload_members_kb(session, chat.id, cur)
+    await callback.message.edit_reply_markup(reply_markup=kb)
+    await callback.answer("Список оновлено")
+
+
 @router.callback_query(ExpenseSG.choosing_participants, ExpToggle.filter())
 async def cb_toggle(callback: CallbackQuery, state: FSMContext, session: AsyncSession, callback_data: ExpToggle) -> None:
     data = await state.get_data()
@@ -238,6 +262,9 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
         await callback.answer("Користувача не знайдено.", show_alert=True)
         return
 
+    # Інакше клієнт Telegram лишає «крутилку» на кнопці до таймауту.
+    await callback.answer()
+
     shares = split_total_equally(amount, len(selected))
     uid_to_share = {uid: sh for uid, sh in zip(selected, shares)}
 
@@ -249,14 +276,22 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     for uid in selected:
         session.add(Debt(expense_id=exp.id, debtor_id=uid, amount=uid_to_share[uid]))
 
+    payer_label = html.escape(payer.full_name or "Користувач", quote=False)
+    desc_html = html.escape(description, quote=False) if description else ""
+    lines = [
+        f"✅ Збережено витрату {money_uah(amount)}",
+        *( [f"📝 {desc_html}"] if desc_html else [] ),
+        f"👤 Платник: {payer_label}",
+    ]
+    body = "\n".join(lines)
+
+    try:
+        await callback.message.edit_text(body, parse_mode=ParseMode.HTML)
+    except Exception:
+        logger.exception("edit_text after expense save failed")
+        await callback.message.answer(body, parse_mode=ParseMode.HTML)
+
     await state.clear()
-    await callback.message.edit_text(
-        f"✅ Збережено витрату {money_uah(amount)}"
-        + (f"\n📝 {description}" if description else "")
-        + f"\n👤 Платник: {payer.full_name}",
-        parse_mode=ParseMode.HTML,
-    )
-    await callback.answer("Готово!")
 
 
 @router.callback_query(ExpenseSG.choosing_participants, ExpCancel.filter())

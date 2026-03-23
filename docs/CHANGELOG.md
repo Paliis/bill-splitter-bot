@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- Витрата: кнопка **«Оновити список»** після `/here` або повідомлення; **`Підтвердити`** одразу викликає `callback.answer()`, безпечний HTML у тексті після збереження, fallback `answer` якщо `edit_text` не вдався (щоб не «зависала» кнопка).
 - Текст `/help`: уточнено учасників (повідомлення, кнопки, Group Privacy + `/here`); підказка, чому можуть не бути кнопок Mono / Buy Me a Coffee.
 - Документація релізу: **`SUPPORT_MONO_URL`** у Render Environment; README/PRODUCT уточнено для Mono та Buy Me a Coffee.
 - **Middleware учасників**: окремий `TrackGroupMembersMiddleware` (на базі `BaseMiddleware`) робить upsert у `ChatMember` з `message` / `edited_message` / `callback_query` у групі — менше залежності від ручного `/here` (якщо оновлення взагалі доходить до бота; **Group Privacy** це не скасовує).

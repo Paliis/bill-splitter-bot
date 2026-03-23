@@ -13,6 +13,10 @@ class ExpSplitAll(CallbackData, prefix="esa"):
     pass
 
 
+class ExpRefreshMembers(CallbackData, prefix="erm"):
+    pass
+
+
 class ExpToggle(CallbackData, prefix="eto"):
     user_id: int
 

@@ -5,7 +5,7 @@ from typing import Iterable, Sequence, Set
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from formatting import truncate_label
-from handlers.callback_data import ExpCancel, ExpConfirm, ExpSplitAll, ExpToggle
+from handlers.callback_data import ExpCancel, ExpConfirm, ExpRefreshMembers, ExpSplitAll, ExpToggle
 
 
 def expense_participants_kb(
@@ -15,6 +15,9 @@ def expense_participants_kb(
     rows: list[list[InlineKeyboardButton]] = []
     rows.append(
         [InlineKeyboardButton(text="🚀 Розділити на всіх", callback_data=ExpSplitAll().pack())]
+    )
+    rows.append(
+        [InlineKeyboardButton(text="🔄 Оновити список", callback_data=ExpRefreshMembers().pack())]
     )
     for uid, label in members:
         mark = "✅" if uid in selected else " "
