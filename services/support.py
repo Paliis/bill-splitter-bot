@@ -12,21 +12,17 @@ def support_mono_url() -> str:
     return (os.getenv("SUPPORT_MONO_URL") or "").strip()
 
 
-def support_buymeacoffee_url() -> str:
-    return (os.getenv("SUPPORT_BUYMEACOFFEE_URL") or "").strip()
-
-
 def _help_support_section_html() -> str:
-    if support_mono_url() or support_buymeacoffee_url():
+    if support_mono_url():
         return (
             "<b>Підтримка</b>\n"
             "Бот користується безкоштовно. Якщо він зекономив вам час і нерви — можна нагадати автору "
-            "про каву одним тапом нижче. Після <b>завершення події</b> такий самий заклик інколи з’являється в кінці повідомлення."
+            "про каву одним тапом нижче (Mono). Після <b>завершення події</b> такий самий заклик інколи з’являється в кінці повідомлення."
         )
     return (
         "<b>Підтримка</b>\n"
-        "Тут можуть з’явитись кнопки «кава» (Mono, Buy Me a Coffee), коли власник бота додасть посилання "
-        "у змінних середовища — локально в <code>.env</code>, на хостингу в розділі Environment."
+        "Тут може з’явитись кнопка «кава» через <b>Mono</b>, коли власник бота додасть посилання "
+        "<code>SUPPORT_MONO_URL</code> у змінних середовища — локально в <code>.env</code>, на хостингу в розділі Environment."
     )
 
 
@@ -67,22 +63,20 @@ def coffee_footer_html() -> str:
         "після поїздки чи події — буду вдячний за віртуальну каву! Це мотивує додавати нові фічі та підтримувати сервер."
     )
     mono = support_mono_url()
-    bmac = support_buymeacoffee_url()
-    if not mono and not bmac:
+    if not mono:
         return block
-    parts = [block, ""]
-    if mono:
-        parts.append(f'• <a href="{html.escape(mono, quote=True)}">Mono</a>')
-    if bmac:
-        parts.append(f'• <a href="{html.escape(bmac, quote=True)}">Buy Me a Coffee</a>')
-    return "\n".join(parts)
+    return "\n".join(
+        [
+            block,
+            "",
+            f'• <a href="{html.escape(mono, quote=True)}">Mono</a>',
+        ]
+    )
 
 
 def help_reply_markup() -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     if u := support_mono_url():
         rows.append([InlineKeyboardButton(text="☕ Підтримати в Mono", url=u)])
-    if u := support_buymeacoffee_url():
-        rows.append([InlineKeyboardButton(text="☕ Кава на Buy Me a Coffee", url=u)])
     rows.append([InlineKeyboardButton(text="📋 До меню", callback_data=MainMenu(act="mn").pack())])
     return InlineKeyboardMarkup(inline_keyboard=rows)

@@ -1,5 +1,5 @@
 # https://render.com/docs/blueprint-spec
-# У дашборді Render задай значення: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL, SUPPORT_BUYMEACOFFEE_URL.
+# У дашборді Render задай значення: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL.
 
 services:
   - type: worker
@@ -16,6 +16,4 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: SUPPORT_MONO_URL
-        sync: false
-      - key: SUPPORT_BUYMEACOFFEE_URL
         sync: false
