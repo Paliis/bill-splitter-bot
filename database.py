@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -25,7 +26,33 @@ def _warn_if_data_may_reset_on_deploy() -> None:
         "і задайте DATABASE_URL з префіксом postgresql+asyncpg://"
     )
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+
+def _asyncpg_url_and_connect_args(url: str) -> tuple[str, dict]:
+    """Neon/libpq дають ?sslmode=require — asyncpg це не приймає; прибираємо й вмикаємо ssl=True."""
+    if "+asyncpg" not in url.lower():
+        return url, {}
+    parsed = urlparse(url)
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    had_sslmode = False
+    kept: list[tuple[str, str]] = []
+    for k, v in pairs:
+        lk = k.lower()
+        if lk == "sslmode":
+            had_sslmode = True
+            continue
+        if lk == "channel_binding":
+            continue
+        kept.append((k, v))
+    new_query = urlencode(kept)
+    new_url = urlunparse(parsed._replace(query=new_query))
+    extra: dict = {}
+    if had_sslmode:
+        extra["connect_args"] = {"ssl": True}
+    return new_url, extra
+
+
+_engine_url, _engine_kw = _asyncpg_url_and_connect_args(DATABASE_URL)
+engine = create_async_engine(_engine_url, echo=False, **_engine_kw)
 async_session_maker = async_sessionmaker(
     engine,
     class_=AsyncSession,
