@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- Виправлено імпорт **`ExpRefreshMembers`** у `expense_entry` (краш на старті без нього).
 - Витрата: кнопка **«Оновити список»** після `/here` або повідомлення; **`Підтвердити`** одразу викликає `callback.answer()`, безпечний HTML у тексті після збереження, fallback `answer` якщо `edit_text` не вдався (щоб не «зависала» кнопка).
 - Текст `/help`: уточнено учасників (повідомлення, кнопки, Group Privacy + `/here`); підказка, чому можуть не бути кнопок Mono / Buy Me a Coffee.
 - Документація релізу: **`SUPPORT_MONO_URL`** у Render Environment; README/PRODUCT уточнено для Mono та Buy Me a Coffee.
