@@ -14,10 +14,9 @@ def main_menu_kb() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(text="📊 Статус", callback_data=MainMenu(act="st").pack()),
-                InlineKeyboardButton(text="🏁 Завершити поїздку / подію", callback_data=MainMenu(act="ft").pack()),
+                InlineKeyboardButton(text="🏁 Завершити", callback_data=MainMenu(act="ft").pack()),
             ],
             [InlineKeyboardButton(text="❓ Допомога", callback_data=MainMenu(act="hp").pack())],
-            [InlineKeyboardButton(text="📋 Меню", callback_data=MainMenu(act="mn").pack())],
         ]
     )
 

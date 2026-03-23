@@ -78,5 +78,5 @@ def help_reply_markup() -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     if u := support_mono_url():
         rows.append([InlineKeyboardButton(text="☕ Підтримати в Mono", url=u)])
-    rows.append([InlineKeyboardButton(text="📋 До меню", callback_data=MainMenu(act="mn").pack())])
+    rows.append([InlineKeyboardButton(text="🔙 До вибору дій", callback_data=MainMenu(act="mn").pack())])
     return InlineKeyboardMarkup(inline_keyboard=rows)
