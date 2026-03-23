@@ -1,0 +1,20 @@
+# https://render.com/docs/blueprint-spec — secrets: set BOT_TOKEN & DATABASE_URL in the dashboard.
+
+services:
+  - type: worker
+    name: bill-splitter-bot
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPPORT_MONO_URL
+        sync: false
+      - key: SUPPORT_BUYMEACOFFEE_URL
+        sync: false
