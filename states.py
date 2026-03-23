@@ -2,6 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class TripSG(StatesGroup):
+    waiting_currency = State()
     waiting_name = State()
 
 

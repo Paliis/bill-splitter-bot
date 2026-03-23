@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from formatting import money_uah
+from formatting import format_trip_money
 from handlers.callback_data import (
     ExpCancel,
     ExpConfirm,
@@ -25,7 +25,8 @@ from handlers.callback_data import (
 from handlers.db_utils import active_trip, chat_by_tg
 from keyboards.inline_factory import expense_participants_kb, member_labels
 from keyboards.main_menu import wizard_cancel_row
-from models import ChatMember, Debt, Expense, User
+from models import ChatMember, Debt, Expense, Trip, User
+from services.i18n import Locale, tr
 from services.split_amount import split_total_equally
 from services.sync_admins import sync_group_admins
 from states import ExpenseSG
@@ -78,24 +79,26 @@ async def begin_expense_participant_selection(
     session: AsyncSession,
     amount: Decimal,
     description: str,
+    locale: Locale,
 ) -> None:
     await sync_group_admins(message.bot, session, message.chat.id)
     chat = await chat_by_tg(session, message.chat.id)
     if not chat:
-        await message.reply("💬 Спочатку напишіть повідомлення в чаті, щоб я бачив учасників.")
+        await message.reply(tr(locale, "exp.no_chat"))
         await state.clear()
         return
     trip = await active_trip(session, chat.id)
     if not trip:
-        await message.reply("🧾 Немає активної поїздки чи події. Створіть її через меню.")
+        await message.reply(tr(locale, "exp.no_trip"))
         await state.clear()
         return
     users = await _members_for_chat(session, chat.id)
     if not users:
-        await message.reply("👥 У чаті ще немає учасників у моїй базі. Напишіть повідомлення в групі.")
+        await message.reply(tr(locale, "exp.no_members_db"))
         await state.clear()
         return
 
+    cc = trip.currency or "UAH"
     await state.set_state(ExpenseSG.choosing_participants)
     await state.update_data(
         trip_id=trip.id,
@@ -103,16 +106,14 @@ async def begin_expense_participant_selection(
         description=description,
         selected=[],
         initiator_tg_id=message.from_user.id,
+        locale=locale,
     )
-    kb = expense_participants_kb(member_labels(users), set())
-    title = f"🧾 Витрата: <b>{money_uah(amount)}</b>"
+    kb = expense_participants_kb(member_labels(users, locale), set(), locale)
+    amt_s = format_trip_money(amount, cc, locale)
+    title = f"🧾 Витрата: <b>{amt_s}</b>"
     if description:
         title += f"\n📝 {description}"
-    title += (
-        "\n\nОберіть, між ким ділити суму, або «Розділити на всіх»."
-        "\n\n<i>Немає людини в списку? Нехай надішле <code>/here</code> або повідомлення (якщо вимкнено Group Privacy), "
-        "потім натисніть <b>«Оновити список»</b>. Адмінів підтягую автоматично.</i>"
-    )
+    title += tr(locale, "exp.split_hint")
     await message.reply(title, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
@@ -120,88 +121,96 @@ async def begin_expense_participant_selection(
     WizardCancel.filter(),
     StateFilter(ExpenseSG.waiting_amount, ExpenseSG.waiting_description),
 )
-async def cb_wizard_cancel_expense(callback: CallbackQuery, state: FSMContext) -> None:
+async def cb_wizard_cancel_expense(callback: CallbackQuery, state: FSMContext, locale: Locale) -> None:
     await state.clear()
-    await callback.answer("Скасовано")
+    await callback.answer(tr(locale, "trip.cancel_short"))
     try:
-        await callback.message.edit_text("❌ Скасовано.")
+        await callback.message.edit_text(tr(locale, "exp.wizard_cancelled"))
     except Exception:
-        await callback.message.answer("❌ Скасовано.")
+        await callback.message.answer(tr(locale, "exp.wizard_cancelled"))
 
 
 @router.message(Command("spent"))
-async def cmd_spent(message: Message, command: CommandObject, state: FSMContext, session: AsyncSession) -> None:
+async def cmd_spent(
+    message: Message,
+    command: CommandObject,
+    state: FSMContext,
+    session: AsyncSession,
+    locale: Locale,
+) -> None:
     parsed = _parse_spent_args(command.args)
     if parsed:
         amount, description = parsed
-        await begin_expense_participant_selection(message, state, session, amount, description)
+        await begin_expense_participant_selection(message, state, session, amount, description, locale)
         return
 
-    # Меню Telegram надсилає лише /spent@bot без аргументів — той самий крок, що кнопка «Додати витрату».
     await sync_group_admins(message.bot, session, message.chat.id)
     chat = await chat_by_tg(session, message.chat.id)
     if not chat or not await active_trip(session, chat.id):
-        await message.reply(
-            "🧾 Немає активної поїздки чи події. Створіть її через меню або <code>/new_trip</code>.",
-            parse_mode=ParseMode.HTML,
-        )
+        await message.reply(tr(locale, "exp.no_active_cmd"), parse_mode=ParseMode.HTML)
         return
     await state.clear()
     await state.set_state(ExpenseSG.waiting_amount)
-    kb = InlineKeyboardMarkup(inline_keyboard=[wizard_cancel_row()])
+    kb = InlineKeyboardMarkup(inline_keyboard=[wizard_cancel_row(locale)])
     await message.reply(
-        "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>).\n"
-        "Або одним повідомленням: <code>/spent 250.50 Кава</code>.",
+        tr(locale, "exp.enter_amount_hint"),
         parse_mode=ParseMode.HTML,
         reply_markup=kb,
     )
 
 
 @router.message(ExpenseSG.waiting_amount, F.text, ~F.text.startswith("/"))
-async def on_expense_amount(message: Message, state: FSMContext, session: AsyncSession) -> None:
+async def on_expense_amount(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
     amt = _parse_amount_text(message.text or "")
     if amt is None:
-        await message.reply("❌ Введіть суму числом, наприклад <code>100</code> або <code>50.25</code>", parse_mode=ParseMode.HTML)
+        await message.reply(tr(locale, "exp.bad_amount"), parse_mode=ParseMode.HTML)
         return
     await state.update_data(pending_amount=str(amt))
     await state.set_state(ExpenseSG.waiting_description)
-    kb = InlineKeyboardMarkup(inline_keyboard=[wizard_cancel_row()])
+    kb = InlineKeyboardMarkup(inline_keyboard=[wizard_cancel_row(locale)])
     await message.reply(
-        "📝 Напишіть короткий опис витрати одним повідомленням.\n"
-        "Або надішліть <code>-</code>, щоб залишити без опису.",
+        tr(locale, "exp.ask_desc"),
         parse_mode=ParseMode.HTML,
         reply_markup=kb,
     )
 
 
 @router.message(ExpenseSG.waiting_description, F.text, ~F.text.startswith("/"))
-async def on_expense_description(message: Message, state: FSMContext, session: AsyncSession) -> None:
+async def on_expense_description(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
     raw = (message.text or "").strip()
-    desc = "" if raw in ("-", "—", "пропустити", "ні", "немає") else raw
+    desc = "" if raw in ("-", "—", "пропустити", "ні", "немає", "skip", "none") else raw
     data = await state.get_data()
     amount = Decimal(str(data.get("pending_amount", "0")))
-    await begin_expense_participant_selection(message, state, session, amount, desc)
+    await begin_expense_participant_selection(message, state, session, amount, desc, locale)
 
 
-async def _reload_members_kb(session: AsyncSession, chat_internal_id: int, selected: set[int]):
+def _locale_from_state(data: dict) -> Locale:
+    loc = data.get("locale")
+    return loc if loc in ("uk", "en") else "uk"
+
+
+async def _reload_members_kb(
+    session: AsyncSession, chat_internal_id: int, selected: set[int], locale: Locale
+):
     users = await _members_for_chat(session, chat_internal_id)
-    return expense_participants_kb(member_labels(users), selected)
+    return expense_participants_kb(member_labels(users, locale), selected, locale)
 
 
 @router.callback_query(ExpenseSG.choosing_participants, ExpSplitAll.filter())
 async def cb_split_all(callback: CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
     data = await state.get_data()
+    loc = _locale_from_state(data)
     if callback.from_user.id != data.get("initiator_tg_id"):
-        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        await callback.answer(tr(loc, "exp.not_for_you"), show_alert=True)
         return
     chat = await chat_by_tg(session, callback.message.chat.id)
     if not chat:
-        await callback.answer("Чат не знайдено.", show_alert=True)
+        await callback.answer(tr(loc, "exp.chat_not_found"), show_alert=True)
         return
     users = await _members_for_chat(session, chat.id)
     selected = {u.id for u in users}
     await state.update_data(selected=list(selected))
-    kb = await _reload_members_kb(session, chat.id, selected)
+    kb = await _reload_members_kb(session, chat.id, selected, loc)
     await callback.message.edit_reply_markup(reply_markup=kb)
     await callback.answer()
 
@@ -209,33 +218,40 @@ async def cb_split_all(callback: CallbackQuery, state: FSMContext, session: Asyn
 @router.callback_query(ExpenseSG.choosing_participants, ExpRefreshMembers.filter())
 async def cb_refresh_members(callback: CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
     data = await state.get_data()
+    loc = _locale_from_state(data)
     if callback.from_user.id != data.get("initiator_tg_id"):
-        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        await callback.answer(tr(loc, "exp.not_for_you"), show_alert=True)
         return
     await sync_group_admins(callback.bot, session, callback.message.chat.id)
     chat = await chat_by_tg(session, callback.message.chat.id)
     if not chat:
-        await callback.answer("Чат не знайдено.", show_alert=True)
+        await callback.answer(tr(loc, "exp.chat_not_found"), show_alert=True)
         return
     users = await _members_for_chat(session, chat.id)
     valid_ids = {u.id for u in users}
     cur = {int(x) for x in (data.get("selected") or [])}
     cur &= valid_ids
     await state.update_data(selected=list(cur))
-    kb = await _reload_members_kb(session, chat.id, cur)
+    kb = await _reload_members_kb(session, chat.id, cur, loc)
     await callback.message.edit_reply_markup(reply_markup=kb)
-    await callback.answer("Список оновлено")
+    await callback.answer(tr(loc, "exp.list_refreshed"))
 
 
 @router.callback_query(ExpenseSG.choosing_participants, ExpToggle.filter())
-async def cb_toggle(callback: CallbackQuery, state: FSMContext, session: AsyncSession, callback_data: ExpToggle) -> None:
+async def cb_toggle(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+    callback_data: ExpToggle,
+) -> None:
     data = await state.get_data()
+    loc = _locale_from_state(data)
     if callback.from_user.id != data.get("initiator_tg_id"):
-        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        await callback.answer(tr(loc, "exp.not_for_you"), show_alert=True)
         return
     chat = await chat_by_tg(session, callback.message.chat.id)
     if not chat:
-        await callback.answer("Чат не знайдено.", show_alert=True)
+        await callback.answer(tr(loc, "exp.chat_not_found"), show_alert=True)
         return
     uid = callback_data.user_id
     cur = set(int(x) for x in (data.get("selected") or []))
@@ -244,7 +260,7 @@ async def cb_toggle(callback: CallbackQuery, state: FSMContext, session: AsyncSe
     else:
         cur.add(uid)
     await state.update_data(selected=list(cur))
-    kb = await _reload_members_kb(session, chat.id, cur)
+    kb = await _reload_members_kb(session, chat.id, cur, loc)
     await callback.message.edit_reply_markup(reply_markup=kb)
     await callback.answer()
 
@@ -252,12 +268,13 @@ async def cb_toggle(callback: CallbackQuery, state: FSMContext, session: AsyncSe
 @router.callback_query(ExpenseSG.choosing_participants, ExpConfirm.filter())
 async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncSession) -> None:
     data = await state.get_data()
+    loc = _locale_from_state(data)
     if callback.from_user.id != data.get("initiator_tg_id"):
-        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        await callback.answer(tr(loc, "exp.not_for_you"), show_alert=True)
         return
     selected = sorted(int(x) for x in (data.get("selected") or []))
     if not selected:
-        await callback.answer("Оберіть хоча б одного учасника.", show_alert=True)
+        await callback.answer(tr(loc, "exp.pick_one"), show_alert=True)
         return
     amount = Decimal(str(data["amount"]))
     description = str(data.get("description") or "")
@@ -266,11 +283,13 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     payer_res = await session.execute(select(User).where(User.tg_id == callback.from_user.id))
     payer = payer_res.scalar_one_or_none()
     if not payer:
-        await callback.answer("Користувача не знайдено.", show_alert=True)
+        await callback.answer(tr(loc, "exp.user_not_found"), show_alert=True)
         return
 
-    # Інакше клієнт Telegram лишає «крутилку» на кнопці до таймауту.
     await callback.answer()
+
+    trip_row = await session.get(Trip, trip_id)
+    cc = (trip_row.currency if trip_row else None) or "UAH"
 
     shares = split_total_equally(amount, len(selected))
     uid_to_share = {uid: sh for uid, sh in zip(selected, shares)}
@@ -279,16 +298,16 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     session.add(exp)
     await session.flush()
 
-    # Частка платника теж у Debt, інакше net платника = уся сума витрати.
     for uid in selected:
         session.add(Debt(expense_id=exp.id, debtor_id=uid, amount=uid_to_share[uid]))
 
-    payer_label = html.escape(payer.full_name or "Користувач", quote=False)
+    payer_label = html.escape(payer.full_name or tr(loc, "user.default"), quote=False)
     desc_html = html.escape(description, quote=False) if description else ""
+    amt_disp = format_trip_money(amount, cc, loc)
     lines = [
-        f"✅ Збережено витрату {money_uah(amount)}",
-        *( [f"📝 {desc_html}"] if desc_html else [] ),
-        f"👤 Платник: {payer_label}",
+        tr(loc, "exp.saved", amount=amt_disp),
+        *([f"📝 {desc_html}"] if desc_html else []),
+        tr(loc, "exp.payer", name=payer_label),
     ]
     body = "\n".join(lines)
 
@@ -304,9 +323,10 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
 @router.callback_query(ExpenseSG.choosing_participants, ExpCancel.filter())
 async def cb_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
+    loc = _locale_from_state(data)
     if callback.from_user.id != data.get("initiator_tg_id"):
-        await callback.answer("⛔️ Це меню не для вас.", show_alert=True)
+        await callback.answer(tr(loc, "exp.not_for_you"), show_alert=True)
         return
     await state.clear()
-    await callback.message.edit_text("❌ Введення витрати скасовано.")
+    await callback.message.edit_text(tr(loc, "exp.cancelled_flow"))
     await callback.answer()

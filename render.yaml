@@ -1,5 +1,5 @@
 # https://render.com/docs/blueprint-spec
-# У дашборді Render: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL, SUPPORT_FEEDBACK_URL.
+# У дашборді Render: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL, SUPPORT_BUYMEACOFFEE_URL, SUPPORT_FEEDBACK_URL.
 
 services:
   - type: worker
@@ -16,6 +16,8 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: SUPPORT_MONO_URL
+        sync: false
+      - key: SUPPORT_BUYMEACOFFEE_URL
         sync: false
       - key: SUPPORT_FEEDBACK_URL
         sync: false

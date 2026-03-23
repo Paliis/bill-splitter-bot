@@ -4,15 +4,22 @@ import html
 from decimal import Decimal
 
 from models import User
+from services.i18n import Locale, format_currency_amount, tr
 
 
 def money_uah(value: Decimal) -> str:
+    """Зворотна сумісність: лише UAH + український підпис."""
     q = value.quantize(Decimal("0.01"))
-    return f"{q:.2f} грн"
+    return format_currency_amount("uk", f"{q:.2f}", "UAH")
 
 
-def user_mention_html(user: User) -> str:
-    name = html.escape(user.full_name or "Користувач")
+def format_trip_money(value: Decimal, currency_code: str, locale: Locale) -> str:
+    q = value.quantize(Decimal("0.01"))
+    return format_currency_amount(locale, f"{q:.2f}", currency_code)
+
+
+def user_mention_html(user: User, locale: Locale = "uk") -> str:
+    name = html.escape(user.full_name or tr(locale, "user.default"))
     if user.username:
         un = html.escape(user.username)
         return f"@{un}"

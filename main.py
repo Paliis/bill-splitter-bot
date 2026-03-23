@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from database import init_db
 from handlers import expense_entry, menu, onboarding, trip_mgmt
-from middlewares import DbSessionMiddleware, TrackGroupMembersMiddleware
+from middlewares import DbSessionMiddleware, LocaleMiddleware, TrackGroupMembersMiddleware
 
 load_dotenv()
 
@@ -34,6 +34,7 @@ async def _main() -> None:
     bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
     dp.update.middleware(TrackGroupMembersMiddleware())
+    dp.update.middleware(LocaleMiddleware())
     dp.update.middleware(DbSessionMiddleware())
 
     dp.include_router(onboarding.router)

@@ -6,6 +6,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update, User as TgUser
 
 from database import async_session_maker
+from services.i18n import Locale, locale_from_telegram
 from services.membership import track_user_in_chat
 
 
@@ -56,6 +57,30 @@ class TrackGroupMembersMiddleware(BaseMiddleware):
                     for tg_u, cid, title in pairs:
                         await track_user_in_chat(track_session, tg_u, cid, title)
                     await track_session.commit()
+        return await handler(event, data)
+
+
+class LocaleMiddleware(BaseMiddleware):
+    """Мова з Telegram language_code: uk/ru → uk, інакше en."""
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ) -> Any:
+        lang: str | None = None
+        if isinstance(event, Update):
+            if event.message and event.message.from_user:
+                lang = event.message.from_user.language_code
+            elif event.edited_message and event.edited_message.from_user:
+                lang = event.edited_message.from_user.language_code
+            elif event.callback_query and event.callback_query.from_user:
+                lang = event.callback_query.from_user.language_code
+            elif event.my_chat_member and event.my_chat_member.from_user:
+                lang = event.my_chat_member.from_user.language_code
+        loc: Locale = locale_from_telegram(lang)
+        data["locale"] = loc
         return await handler(event, data)
 
 

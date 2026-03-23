@@ -9,6 +9,10 @@ class WizardCancel(CallbackData, prefix="wc"):
     pass
 
 
+class TripCurrency(CallbackData, prefix="tcr"):
+    code: str
+
+
 class ExpSplitAll(CallbackData, prefix="esa"):
     pass
 

@@ -3,6 +3,7 @@ import os
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from dotenv import load_dotenv
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from models import Base
@@ -62,10 +63,27 @@ async_session_maker = async_sessionmaker(
 )
 
 
+async def _migrate_trip_currency_column() -> None:
+    async with engine.begin() as conn:
+        dialect = conn.dialect.name
+        if dialect == "postgresql":
+            await conn.execute(
+                text("ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency VARCHAR(8) NOT NULL DEFAULT 'UAH'")
+            )
+        elif dialect == "sqlite":
+            r = await conn.execute(text("PRAGMA table_info(trips)"))
+            cols = [row[1] for row in r.fetchall()]
+            if "currency" not in cols:
+                await conn.execute(
+                    text("ALTER TABLE trips ADD COLUMN currency VARCHAR(8) NOT NULL DEFAULT 'UAH'")
+                )
+
+
 async def init_db() -> None:
     _warn_if_data_may_reset_on_deploy()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _migrate_trip_currency_column()
     async with async_session_maker() as session:
         fixed = await repair_legacy_payer_debts(session)
         await session.commit()
