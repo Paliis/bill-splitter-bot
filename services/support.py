@@ -16,6 +16,20 @@ def support_buymeacoffee_url() -> str:
     return (os.getenv("SUPPORT_BUYMEACOFFEE_URL") or "").strip()
 
 
+def _help_support_section_html() -> str:
+    if support_mono_url() or support_buymeacoffee_url():
+        return (
+            "<b>Підтримка</b>\n"
+            "Бот користується безкоштовно. Якщо він зекономив вам час і нерви — можна нагадати автору "
+            "про каву одним тапом нижче. Після <b>завершення події</b> такий самий заклик інколи з’являється в кінці повідомлення."
+        )
+    return (
+        "<b>Підтримка</b>\n"
+        "Тут можуть з’явитись кнопки «кава» (Mono, Buy Me a Coffee), коли власник бота додасть посилання "
+        "у змінних середовища — локально в <code>.env</code>, на хостингу в розділі Environment."
+    )
+
+
 def help_text_html() -> str:
     return (
         "❓ <b>Допомога — Bill Splitter</b>\n\n"
@@ -42,11 +56,7 @@ def help_text_html() -> str:
         "<b>Команди</b>\n"
         "<code>/menu</code>, <code>/new_trip</code>, <code>/spent</code>, <code>/status</code>, "
         "<code>/finish_trip</code>, <code>/help</code>, <code>/here</code> (зареєструватись у списку учасників)\n\n"
-        "<b>Підтримка</b>\n"
-        "Після завершення події бот може додати блок «віртуальна кава». "
-        "Кнопки <b>Mono</b> / <b>Buy Me a Coffee</b> під цим повідомленням з’являються лише якщо "
-        "на сервері бота задано відповідні посилання у змінних середовища (локально — у <code>.env</code>, "
-        "на хостингу — у налаштуваннях сервісу). Якщо кнопок немає — змінні не задані на цьому запуску."
+        + _help_support_section_html()
     )
 
 
@@ -71,8 +81,8 @@ def coffee_footer_html() -> str:
 def help_reply_markup() -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
     if u := support_mono_url():
-        rows.append([InlineKeyboardButton(text="☕ Mono", url=u)])
+        rows.append([InlineKeyboardButton(text="☕ Підтримати в Mono", url=u)])
     if u := support_buymeacoffee_url():
-        rows.append([InlineKeyboardButton(text="☕ Buy Me a Coffee", url=u)])
+        rows.append([InlineKeyboardButton(text="☕ Кава на Buy Me a Coffee", url=u)])
     rows.append([InlineKeyboardButton(text="📋 До меню", callback_data=MainMenu(act="mn").pack())])
     return InlineKeyboardMarkup(inline_keyboard=rows)
