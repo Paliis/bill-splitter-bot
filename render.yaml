@@ -1,4 +1,5 @@
-# https://render.com/docs/blueprint-spec — secrets: set BOT_TOKEN & DATABASE_URL in the dashboard.
+# https://render.com/docs/blueprint-spec
+# У дашборді Render задай значення: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL, SUPPORT_BUYMEACOFFEE_URL.
 
 services:
   - type: worker
