@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from database import init_db
 from handlers import expense_entry, menu, onboarding, trip_mgmt
-from middlewares import DbSessionMiddleware
+from middlewares import DbSessionMiddleware, TrackGroupMembersMiddleware
 
 load_dotenv()
 
@@ -33,6 +33,7 @@ async def _main() -> None:
 
     bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
+    dp.update.middleware(TrackGroupMembersMiddleware())
     dp.update.middleware(DbSessionMiddleware())
 
     dp.include_router(onboarding.router)
@@ -49,6 +50,7 @@ async def _main() -> None:
             BotCommand(command="spent", description="Додати витрату (або сума в одному рядку)"),
             BotCommand(command="finish_trip", description="Завершити поїздку/подію та розрахунок"),
             BotCommand(command="help", description="Допомога та як користуватись ботом"),
+            BotCommand(command="here", description="Додати себе в список учасників групи"),
         ]
     )
 

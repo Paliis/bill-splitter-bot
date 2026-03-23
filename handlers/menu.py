@@ -11,6 +11,7 @@ from handlers.callback_data import MainMenu, WizardCancel
 from handlers.db_utils import active_trip, chat_by_tg
 from handlers.trip_mgmt import send_group_finish, send_group_status, try_create_trip
 from keyboards.main_menu import main_menu_kb, wizard_cancel_row
+from services.membership import track_user_in_chat
 from services.support import help_reply_markup, help_text_html
 from services.sync_admins import sync_group_admins
 from states import ExpenseSG, TripSG
@@ -50,9 +51,9 @@ def _menu_caption() -> str:
     return (
         "📋 <b>Bill Splitter</b>\n"
         "Оберіть дію нижче, згадайте мене через @ або <code>/menu</code>.\n"
-        "Адмінів підтягую сам; решта — коли напишуть у чат або їх додадуть.\n"
+        "Адмінів підтягую сам; інші — коли напишуть у чат (якщо бот бачить повідомлення) або <code>/here</code>.\n"
         "«Поїздка» і «подія» — це одне й те саме тут: спільний період витрат.\n"
-        "Текстом: <code>/new_trip</code>, <code>/spent</code>, <code>/status</code>, <code>/finish_trip</code>, <code>/help</code>"
+        "Текстом: <code>/new_trip</code>, <code>/spent</code>, <code>/status</code>, <code>/finish_trip</code>, <code>/help</code>, <code>/here</code>"
     )
 
 
@@ -70,6 +71,22 @@ async def cmd_start_menu(message: Message, session: AsyncSession) -> None:
 async def cmd_help(message: Message, session: AsyncSession) -> None:
     await sync_group_admins(message.bot, session, message.chat.id)
     await message.reply(help_text_html(), parse_mode=ParseMode.HTML, reply_markup=help_reply_markup())
+
+
+@router.message(Command("here"))
+async def cmd_here(message: Message, session: AsyncSession) -> None:
+    """Додає відправника в ChatMember; працює навіть коли в групі ввімкнено Privacy (команди завжди доходять)."""
+    u = message.from_user
+    if not u or u.is_bot:
+        return
+    await sync_group_admins(message.bot, session, message.chat.id)
+    title = message.chat.title or ""
+    await track_user_in_chat(session, u, message.chat.id, title)
+    await message.reply(
+        "✅ Вас додано до списку учасників для поділу витрат у цій групі.\n"
+        "Якщо когось немає в списку при витраті — нехай теж надішле <code>/here</code> сюди.",
+        parse_mode=ParseMode.HTML,
+    )
 
 
 @router.message(BotMentionedIdle(), F.text)

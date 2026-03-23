@@ -2,6 +2,32 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+_STEP = Decimal("0.01")
+# Максимальна «копійкова» різниця, яку знімаємо на одного учасника (після округлення нетто).
+_MAX_RESIDUAL = Decimal("0.02")
+
+
+def normalize_trip_nets_to_zero_sum(nets: dict[int, Decimal]) -> dict[int, Decimal]:
+    """
+    Після quantize по 0.01 сума нетто інколи може відрізнятися від 0 на копійку.
+    Знімаємо залишок на найбільшого кредитора або найбільшого дебітора.
+    """
+    if not nets:
+        return {}
+    out = {uid: Decimal(str(net)).quantize(_STEP) for uid, net in nets.items()}
+    total = sum(out.values(), Decimal("0")).quantize(_STEP)
+    if total == 0:
+        return out
+    if abs(total) > _MAX_RESIDUAL:
+        return out
+    uid_max = max(out.keys(), key=lambda u: out[u])
+    uid_min = min(out.keys(), key=lambda u: out[u])
+    if total > 0:
+        out[uid_max] = (out[uid_max] - total).quantize(_STEP)
+    else:
+        out[uid_min] = (out[uid_min] - total).quantize(_STEP)
+    return out
+
 
 def greedy_minimal_transfers(nets: dict[int, Decimal]) -> list[tuple[int, int, Decimal]]:
     debtors: list[list] = []  # [user_id, amount_owed_positive]

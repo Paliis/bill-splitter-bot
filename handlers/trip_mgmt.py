@@ -13,7 +13,7 @@ from formatting import money_uah, user_mention_html
 from handlers.db_utils import active_trip, chat_by_tg, is_user_group_admin, user_by_tg
 from models import Trip, User
 from services.balances import compute_trip_net_by_user, list_chat_member_balances, trip_total_spent
-from services.settlement import greedy_minimal_transfers
+from services.settlement import greedy_minimal_transfers, normalize_trip_nets_to_zero_sum
 from services.support import coffee_footer_html
 from services.sync_admins import sync_group_admins
 
@@ -74,6 +74,7 @@ async def send_group_finish(
         return
 
     nets = await compute_trip_net_by_user(session, trip.id)
+    nets = normalize_trip_nets_to_zero_sum(nets)
     transfers = greedy_minimal_transfers(nets)
 
     trip.is_active = False
