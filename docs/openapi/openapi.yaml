@@ -1,0 +1,616 @@
+openapi: 3.0.3
+info:
+  title: Bill Splitter API
+  description: |
+    REST API single source of truth для обліку спільних витрат (поїздки/події, баланси, мінімальні перекази).
+    MVP-мепінг: `partyId` = внутрішній id чату в БД (`chats.id`) для Telegram; див. docs/openapi/README.md.
+  version: 0.1.0
+  license:
+    name: Proprietary
+    url: https://github.com/Paliis/bill-splitter-bot
+
+servers:
+  - url: "{apiBaseUrl}"
+    description: Базовий URL задає клієнт (прод або dev).
+    variables:
+      apiBaseUrl:
+        default: http://127.0.0.1:8000
+
+tags:
+  - name: Meta
+    description: Службові
+  - name: Auth
+    description: Авторизація (JWT / Telegram bridge)
+  - name: Parties
+    description: Простір події (група)
+  - name: Trips
+    description: Поїздки / події
+  - name: Expenses
+    description: Витрати
+  - name: Settlement
+    description: Баланси та перекази
+
+paths:
+  /health:
+    get:
+      tags: [Meta]
+      summary: Перевірка живості процесу
+      operationId: healthCheck
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        "503":
+          description: Сервіс тимчасово не готовий (наприклад БД недоступна)
+        "400":
+          description: Некоректні параметри (якщо health розширять)
+
+  /v1/me:
+    get:
+      tags: [Auth]
+      summary: Поточний користувач
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Профіль
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/parties/{partyId}/members:
+    get:
+      tags: [Parties]
+      summary: Учасники простору (для вибору поділу витрат)
+      operationId: listPartyMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/partyId"
+      responses:
+        "200":
+          description: Список учасників
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/parties/{partyId}/trips:
+    get:
+      tags: [Trips]
+      summary: Поїздки простору (активні та архівні — фільтри пізніше)
+      operationId: listTripsByParty
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/partyId"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, settled, all]
+            default: all
+      responses:
+        "200":
+          description: Список поїздок
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Trips]
+      summary: Створити поїздку (якщо немає іншої active — правило домену)
+      operationId: createTrip
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/partyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripCreateRequest"
+      responses:
+        "201":
+          description: Створено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Вже є активна поїздка в просторі
+
+  /v1/trips/{tripId}:
+    get:
+      tags: [Trips]
+      summary: Деталі поїздки
+      operationId: getTrip
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/trips/{tripId}/finish:
+    post:
+      tags: [Trips]
+      summary: Завершити поїздку (settled, архів для обліку)
+      operationId: finishTrip
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      responses:
+        "200":
+          description: Поїздка закрита; тіло може містити підсумок переказів
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettlementResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Вже settled або не задовільні умови
+
+  /v1/trips/{tripId}/balances:
+    get:
+      tags: [Settlement]
+      summary: Нетто-баланси учасників (заплатив − частка)
+      operationId: getTripBalances
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/trips/{tripId}/settlement:
+    get:
+      tags: [Settlement]
+      summary: Мінімальний набір переказів (greedy на нетто після нормалізації)
+      operationId: getTripSettlement
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/trips/{tripId}/expenses:
+    get:
+      tags: [Expenses]
+      summary: Стрічка витрат
+      operationId: listExpenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Expenses]
+      summary: Додати витрату (структуровано; опційно raw_line на бекенді для парсингу)
+      operationId: createExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/tripId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseCreateRequest"
+      responses:
+        "201":
+          description: Створено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/expenses/{expenseId}:
+    get:
+      tags: [Expenses]
+      summary: Одна витрата
+      operationId: getExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/expenseId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Expenses]
+      summary: Оновити витрату (лише автор; не після settle — правило продукту)
+      operationId: updateExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/expenseId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpensePatchRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Поїздка archived / settled
+    delete:
+      tags: [Expenses]
+      summary: Видалити витрату (лише автор)
+      operationId: deleteExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/expenseId"
+      responses:
+        "204":
+          description: Видалено
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token після обміну Telegram / email (імплементація пізніше)
+
+  parameters:
+    partyId:
+      name: partyId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: id простору (MVP = chats.id)
+    tripId:
+      name: tripId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    expenseId:
+      name: expenseId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    Unauthorized:
+      description: Неавторизовано
+    Forbidden:
+      description: Заборонено
+    NotFound:
+      description: Не знайдено
+    BadRequest:
+      description: Некоректне тіло або параметри
+
+  schemas:
+    UserProfile:
+      type: object
+      required: [id, locale]
+      properties:
+        id:
+          type: integer
+          format: int64
+        locale:
+          type: string
+          enum: [uk, en]
+        displayName:
+          type: string
+        telegram:
+          type: object
+          nullable: true
+          properties:
+            tgId:
+              type: integer
+              format: int64
+            username:
+              type: string
+              nullable: true
+
+    UserSummary:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        username:
+          type: string
+          nullable: true
+
+    TripStatus:
+      type: string
+      description: У БД зараз is_active; для API — вирівняти з active | settled | archived
+      enum: [active, settled, archived]
+
+    Trip:
+      type: object
+      required: [id, partyId, name, currency, status, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        partyId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        currency:
+          type: string
+          example: UAH
+        status:
+          $ref: "#/components/schemas/TripStatus"
+        createdAt:
+          type: string
+          format: date-time
+        createdByUserId:
+          type: integer
+          format: int64
+
+    TripCreateRequest:
+      type: object
+      required: [name, currency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 8
+          example: UAH
+
+    TripListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trip"
+
+    Expense:
+      type: object
+      required: [id, tripId, payerUserId, amount, currency, description, createdAt, debtorUserIds]
+      properties:
+        id:
+          type: integer
+          format: int64
+        tripId:
+          type: integer
+          format: int64
+        payerUserId:
+          type: integer
+          format: int64
+        amount:
+          type: string
+          description: Decimal як рядок
+          example: "125.50"
+        currency:
+          description: З валюти поїздки (денормалізовано для зручності клієнта)
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        debtorUserIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+
+    ExpenseCreateRequest:
+      description: |
+        Або `raw` (парсинг на бекенді), або пара `amount` + `debtorUserIds` (і опційно `description`).
+        Валідація «хоча б один режим» — на рівні імплементації.
+      type: object
+      properties:
+        raw:
+          type: string
+          description: Рядок на кшталт "100 кава" / "Кава 100"
+        amount:
+          type: string
+          nullable: true
+        description:
+          type: string
+          default: ""
+        debtorUserIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+
+    ExpensePatchRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+        description:
+          type: string
+        debtorUserIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+
+    ExpenseListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Expense"
+
+    BalanceRow:
+      type: object
+      required: [userId, netAmount]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        netAmount:
+          description: Позитивний = кредит, негативний = борг у моделі обліку
+          type: string
+          example: "-50.00"
+
+    BalanceListResponse:
+      type: object
+      required: [currency, items]
+      properties:
+        currency:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalanceRow"
+
+    Transfer:
+      type: object
+      required: [fromUserId, toUserId, amount]
+      properties:
+        fromUserId:
+          type: integer
+          format: int64
+          description: Боржник (відправляє)
+        toUserId:
+          type: integer
+          format: int64
+        amount:
+          type: string
+
+    TransferListResponse:
+      type: object
+      required: [currency, items]
+      properties:
+        currency:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transfer"
+
+    SettlementResult:
+      type: object
+      properties:
+        trip:
+          $ref: "#/components/schemas/Trip"
+        transfers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transfer"
