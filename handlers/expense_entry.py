@@ -58,14 +58,39 @@ def _parse_spent_args(args: str | None) -> tuple[Decimal, str] | None:
     return amt, desc
 
 
+_AMOUNT_TOKEN = re.compile(r"\d+(\.\d+)?")
+_LETTERS_RE = re.compile(r"[a-zA-Zа-яА-ЯіїєґІЇЄҐ]")
+
+
 def _parse_amount_text(text: str) -> Decimal | None:
-    raw = text.strip().replace(",", ".").replace(" ", "")
-    if not re.fullmatch(r"\d+(\.\d+)?", raw):
+    t = (text or "").strip()
+    if not t:
         return None
+    compact = t.replace(",", ".").replace(" ", "")
+    if _AMOUNT_TOKEN.fullmatch(compact):
+        raw = compact
+    else:
+        parts = t.split()
+        first = (parts[0].replace(",", ".") if parts else "").strip()
+        if not _AMOUNT_TOKEN.fullmatch(first):
+            return None
+        raw = first
     amt = Decimal(raw).quantize(Decimal("0.01"))
     if amt <= 0:
         return None
     return amt
+
+
+def _looks_like_casual_chat_while_waiting_amount(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+    first = t.split()[0].replace(",", ".") if t.split() else ""
+    if _AMOUNT_TOKEN.fullmatch(first):
+        return False
+    if len(t) > 40:
+        return True
+    return bool(_LETTERS_RE.search(t))
 
 
 async def _members_for_chat(session: AsyncSession, chat_internal_id: int) -> list[User]:
@@ -161,9 +186,14 @@ async def cmd_spent(
 
 @router.message(ExpenseSG.waiting_amount, F.text, ~F.text.startswith("/"))
 async def on_expense_amount(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
-    amt = _parse_amount_text(message.text or "")
+    raw_text = message.text or ""
+    amt = _parse_amount_text(raw_text)
     if amt is None:
-        await message.reply(tr(locale, "exp.bad_amount"), parse_mode=ParseMode.HTML)
+        if _looks_like_casual_chat_while_waiting_amount(raw_text):
+            await state.clear()
+            await message.reply(tr(locale, "exp.abandon_casual"), parse_mode=ParseMode.HTML)
+        else:
+            await message.reply(tr(locale, "exp.bad_amount"), parse_mode=ParseMode.HTML)
         return
     await state.update_data(pending_amount=str(amt))
     await state.set_state(ExpenseSG.waiting_description)

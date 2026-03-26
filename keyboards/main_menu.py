@@ -17,7 +17,10 @@ def main_menu_kb(locale: Locale) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=tr(locale, "btn.status"), callback_data=MainMenu(act="st").pack()),
                 InlineKeyboardButton(text=tr(locale, "btn.finish"), callback_data=MainMenu(act="ft").pack()),
             ],
-            [InlineKeyboardButton(text=tr(locale, "btn.help"), callback_data=MainMenu(act="hp").pack())],
+            [
+                InlineKeyboardButton(text=tr(locale, "btn.help"), callback_data=MainMenu(act="hp").pack()),
+                InlineKeyboardButton(text=tr(locale, "btn.stop_wizard"), callback_data=MainMenu(act="cw").pack()),
+            ],
         ]
     )
 

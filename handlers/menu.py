@@ -58,12 +58,23 @@ async def _send_main_menu(message: Message, session: AsyncSession, locale: Local
 
 
 @router.message(Command("start", "menu"))
-async def cmd_start_menu(message: Message, session: AsyncSession, locale: Locale) -> None:
+async def cmd_start_menu(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
+    await state.clear()
     await _send_main_menu(message, session, locale)
 
 
+@router.message(Command("cancel"))
+async def cmd_cancel_wizard(message: Message, state: FSMContext, locale: Locale) -> None:
+    if await state.get_state() is None:
+        await message.reply(tr(locale, "wizard.no_active"), parse_mode=ParseMode.HTML)
+        return
+    await state.clear()
+    await message.reply(tr(locale, "wizard.cancelled_cmd"), parse_mode=ParseMode.HTML)
+
+
 @router.message(Command("help"))
-async def cmd_help(message: Message, session: AsyncSession, locale: Locale) -> None:
+async def cmd_help(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
+    await state.clear()
     await sync_group_admins(message.bot, session, message.chat.id)
     await message.reply(
         help_text_html(locale),
@@ -159,6 +170,7 @@ async def on_main_menu(
     act = callback_data.act
     if act == "mn":
         await callback.answer()
+        await state.clear()
         await sync_group_admins(callback.message.bot, session, callback.message.chat.id)
         try:
             await callback.message.edit_text(
@@ -224,8 +236,18 @@ async def on_main_menu(
         )
         return
 
+    if act == "cw":
+        if await state.get_state() is None:
+            await callback.answer(tr(locale, "wizard.no_active"), show_alert=True)
+            return
+        await callback.answer()
+        await state.clear()
+        await callback.message.answer(tr(locale, "wizard.cancelled_cmd"), parse_mode=ParseMode.HTML)
+        return
+
     if act == "hp":
         await callback.answer()
+        await state.clear()
         await sync_group_admins(callback.message.bot, session, callback.message.chat.id)
         try:
             await callback.message.edit_text(

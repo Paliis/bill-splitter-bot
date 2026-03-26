@@ -42,7 +42,8 @@ STRINGS: dict[Locale, dict[str, str]] = {
             "1️⃣ Створіть <b>«Нову поїздку / подію»</b>.\n"
             "2️⃣ Додавайте витрати — кнопка <b>«Додати витрату»</b>.\n"
             "3️⃣ Наприкінці — <b>«Завершити»</b>: скажу, хто кому скільки винен.\n\n"
-            "Оберіть дію нижче або згадайте мене через @; також <code>/menu</code>."
+            "Оберіть дію нижче або згадайте мене через @; також <code>/menu</code>.\n\n"
+            "<i>Під час майстра витрати: <code>/cancel</code> — вийти й далі писати в чат.</i>"
         ),
         "btn.new_trip": "🆕 Нова поїздка / подія",
         "btn.add_expense": "💸 Додати витрату",
@@ -50,6 +51,7 @@ STRINGS: dict[Locale, dict[str, str]] = {
         "btn.finish": "🏁 Завершити",
         "btn.help": "❓ Допомога",
         "btn.cancel": "❌ Скасувати",
+        "btn.stop_wizard": "🛑 Вийти з майстра",
         "btn.back_actions": "🔙 До вибору дій",
         "btn.support_mono": "☕ Підтримати в Mono",
         "btn.support_bmac": "☕ Buy me a coffee",
@@ -68,10 +70,19 @@ STRINGS: dict[Locale, dict[str, str]] = {
         ),
         "exp.enter_amount": "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>).",
         "exp.enter_amount_hint": (
-            "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>).\n"
-            "Або одним повідомленням: <code>/spent 250.50 Кава</code>."
+            "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>). "
+            "Можна надіслати лише число або число з текстом після нього.\n"
+            "Або одним рядком: <code>/spent 250.50 Кава</code>.\n"
+            "Щоб вийти і не заважати чату: <code>/cancel</code> або <code>/menu</code>."
         ),
-        "exp.bad_amount": "❌ Введіть суму числом, наприклад <code>100</code> або <code>50.25</code>",
+        "exp.bad_amount": "❌ Надішліть лише суму числом, наприклад <code>100</code> або <code>50.25</code> (або <code>/cancel</code>).",
+        "exp.abandon_casual": (
+            "💬 Схоже, ви просто спілкуєтесь у чаті. <b>Майстер витрати вимкнено.</b>\n"
+            "Щоб додати витрату знову — кнопка «Додати витрату» або <code>/spent</code>. "
+            "Підказка: під час кроків бота можна завжди надіслати <code>/cancel</code>."
+        ),
+        "wizard.cancelled_cmd": "✅ Майстер бота вимкнено — можете далі писати в чат.",
+        "wizard.no_active": "ℹ️ Немає незавершеного кроку бота.",
         "exp.ask_desc": (
             "📝 Напишіть короткий опис витрати одним повідомленням.\n"
             "Або надішліть <code>-</code>, щоб залишити без опису."
@@ -136,7 +147,8 @@ STRINGS: dict[Locale, dict[str, str]] = {
             "🛠 <b>Короткі команди для профі</b>\n"
             "<code>/spent 250 Кава</code> — швидка витрата одним рядком.\n"
             "<code>/status</code> — актуальні баланси.\n"
-            "<code>/finish_trip</code> — фінальний розрахунок.\n\n"
+            "<code>/finish_trip</code> — фінальний розрахунок.\n"
+            "<code>/cancel</code> — вийти з кроків бота, якщо завис «на питанні».\n\n"
         ),
         "help.support_mono": (
             "☕️ <b>Підтримка</b>\n"
@@ -164,7 +176,8 @@ STRINGS: dict[Locale, dict[str, str]] = {
             "1️⃣ Create a <b>New trip / event</b>.\n"
             "2️⃣ Add expenses with <b>Add expense</b>.\n"
             "3️⃣ When you’re done, tap <b>Settle</b> — I’ll show who owes whom.\n\n"
-            "Pick an action below, mention me with @, or use <code>/menu</code>."
+            "Pick an action below, mention me with @, or use <code>/menu</code>.\n\n"
+            "<i>During the expense wizard: <code>/cancel</code> exits so you can chat freely.</i>"
         ),
         "btn.new_trip": "🆕 New trip / event",
         "btn.add_expense": "💸 Add expense",
@@ -172,6 +185,7 @@ STRINGS: dict[Locale, dict[str, str]] = {
         "btn.finish": "🏁 Settle debts",
         "btn.help": "❓ Help",
         "btn.cancel": "❌ Cancel",
+        "btn.stop_wizard": "🛑 Exit wizard",
         "btn.back_actions": "🔙 Back to actions",
         "btn.support_mono": "☕ Support via Mono",
         "btn.support_bmac": "☕ Buy me a coffee",
@@ -190,10 +204,19 @@ STRINGS: dict[Locale, dict[str, str]] = {
         ),
         "exp.enter_amount": "💸 Enter the expense <b>amount</b> (e.g. <code>100</code> or <code>50.25</code>).",
         "exp.enter_amount_hint": (
-            "💸 Enter the expense <b>amount</b> (e.g. <code>100</code> or <code>50.25</code>).\n"
-            "Or in one line: <code>/spent 25.50 Coffee</code>."
+            "💸 Enter the expense <b>amount</b> (e.g. <code>100</code> or <code>50.25</code>). "
+            "You can send just the number, or a number followed by text.\n"
+            "Or in one line: <code>/spent 25.50 Coffee</code>.\n"
+            "To exit and not spam the group: <code>/cancel</code> or <code>/menu</code>."
         ),
-        "exp.bad_amount": "❌ Enter a number, e.g. <code>100</code> or <code>50.25</code>",
+        "exp.bad_amount": "❌ Send just a number, e.g. <code>100</code> or <code>50.25</code> (or <code>/cancel</code>).",
+        "exp.abandon_casual": (
+            "💬 Looks like you’re chatting. <b>The expense wizard is closed.</b>\n"
+            "To add an expense again — use <b>Add expense</b> or <code>/spent</code>. "
+            "Tip: during any bot step you can send <code>/cancel</code>."
+        ),
+        "wizard.cancelled_cmd": "✅ Bot wizard cleared — you can keep chatting.",
+        "wizard.no_active": "ℹ️ No unfinished bot step right now.",
         "exp.ask_desc": (
             "📝 Send a short description in one message.\n"
             "Or send <code>-</code> to skip."
@@ -256,7 +279,8 @@ STRINGS: dict[Locale, dict[str, str]] = {
             "🛠 <b>Quick commands</b>\n"
             "<code>/spent 250 Coffee</code> — quick expense in one line.\n"
             "<code>/status</code> — current balances.\n"
-            "<code>/finish_trip</code> — final settlement.\n\n"
+            "<code>/finish_trip</code> — final settlement.\n"
+            "<code>/cancel</code> — leave the bot wizard if you’re stuck mid-flow.\n\n"
         ),
         "help.support_mono": (
             "☕️ <b>Support</b>\n"

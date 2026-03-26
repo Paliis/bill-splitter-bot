@@ -50,6 +50,7 @@ async def _main() -> None:
             BotCommand(command="status", description="Баланси та сума витрат"),
             BotCommand(command="spent", description="Додати витрату (або сума в одному рядку)"),
             BotCommand(command="finish_trip", description="Завершити поїздку/подію та розрахунок"),
+            BotCommand(command="cancel", description="Вийти з майстра бота (сума/опис/інше)"),
             BotCommand(command="help", description="Допомога та як користуватись ботом"),
             BotCommand(command="here", description="Додати себе в список учасників групи"),
         ]
