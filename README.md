@@ -3,6 +3,7 @@
 Telegram-бот для розподілу спільних витрат у групах (поїздки / події).
 
 - **Документація продукту:** [docs/PRODUCT.md](docs/PRODUCT.md)  
+- **Архітектура (PWA → магазини, API-first):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)  
 - **Історія змін (обов’язково оновлювати при змінах):** [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 Локально: скопіюй `.env.example` → `.env`, задай `BOT_TOKEN`, потім `pip install -r requirements.txt` і `python main.py`.
