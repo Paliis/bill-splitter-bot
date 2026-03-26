@@ -24,7 +24,8 @@
 | **CHANGELOG.md** | Будь-яка змістовна зміна в репозиторії (код, доки, деплой-конфіг). |
 | **legal/** | Чернетки Privacy / Terms; після правок юриста — оновити дати, плейсхолдери, URL. |
 | **openapi/** | Контракт **openapi.yaml**; при зміні полів БД або URL — оновити й узгодити з клієнтами. |
-| **DEPLOY_RENDER.md** | Інструкція двох сервісів на Render; дублює чеклист разом із **ROADMAP**. |
+| **STEP_BY_STEP.md** | Повна покрокова інструкція для власника (BotFather, Neon/Postgres, Render, env, перевірки). |
+| **DEPLOY_RENDER.md** | Скорочений опис двох сервісів; посилання на **STEP_BY_STEP**. |
 | **scripts/verify_local.py** | Швидка перевірка без сервера; оновлювати, якщо змінюється структура пакетів. |
 | **.github/workflows/ci.yml** | CI на `main` / PR; додавати кроки обережно (секрети не логувати). |
 
@@ -96,7 +97,7 @@
 - [ ] Відкрити **публічний URL** API: `GET /health` → `{"status":"ok"}`.
 - [ ] Перевірити `GET /v1/trips/<існуючий_id>` із заголовком **`X-Api-Secret`** → JSON поїздки або очікуваний **404**.
 
-Детальніше: [DEPLOY_RENDER.md](./DEPLOY_RENDER.md).
+Детальніше: покроково [STEP_BY_STEP.md](./STEP_BY_STEP.md); скорочено [DEPLOY_RENDER.md](./DEPLOY_RENDER.md).
 
 ### Локально (розробка)
 
@@ -138,5 +139,6 @@
 | 2026-03-27 | Додано **docs/openapi/**; Фаза 0 закрита по контракту; **Фаза 1 крок 1.2** — імплементація HTTP. |
 | 2026-03-27 | Схема **A** на Render: worker + **web** `bill-splitter-api`; **backend/main.py**, `API_SECRET`, оновлено **render.yaml**. |
 | 2026-03-27 | **Чеклист власника** у ROADMAP; **DEPLOY_RENDER.md**; **scripts/verify_local.py**; **GitHub Actions CI**. |
+| 2026-03-27 | **[STEP_BY_STEP.md](./STEP_BY_STEP.md)** — детальна покрокова інструкція деплою та перевірок. |
 
 *При оновленні додавайте рядок з датою і одним реченням.*

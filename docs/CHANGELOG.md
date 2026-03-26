@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- **[STEP_BY_STEP.md](./STEP_BY_STEP.md)** — детальна покрокова інструкція (BotFather, Postgres/Neon, Render Blueprint/ручний, env, бот, API, CI); посилання з README, ROADMAP, DEPLOY_RENDER.
 - **Чеклист власника** у [ROADMAP.md](./ROADMAP.md); [DEPLOY_RENDER.md](./DEPLOY_RENDER.md); [scripts/verify_local.py](../scripts/verify_local.py); CI [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (compileall + імпорт API).
 - **FastAPI** у **`backend/`**: `GET /health`, `GET /v1/trips/{tripId}`; опційний **`API_SECRET`** + заголовок **`X-Api-Secret`** для `/v1/*`; залежності **fastapi**, **uvicorn**; **Render** — другий сервіс **web** `bill-splitter-api` у `render.yaml`; [backend/README.md](../backend/README.md), `.env.example`.
 - **OpenAPI v0.1** — [docs/openapi/openapi.yaml](./openapi/openapi.yaml) (health, parties, trips, expenses, balances, settlement); [README](./openapi/README.md); **ROADMAP**: Фаза 0 закрита по контракту, активний **Фаза 1 крок 1.2** (імплементація HTTP).
