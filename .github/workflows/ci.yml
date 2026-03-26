@@ -1,0 +1,32 @@
+# Перевірка: залежності, компіляція, імпорт FastAPI-бекенду (без BOT_TOKEN).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile all
+        run: python -m compileall -q .
+
+      - name: Import API app
+        env:
+          PYTHONPATH: .
+          # SQLite у CI — init_db створить файли в робочій директорії
+          DATABASE_URL: sqlite+aiosqlite:///./ci_bot.db
+        run: python -c "from backend.main import app; assert app.title"

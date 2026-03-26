@@ -4,7 +4,13 @@
 
 ## Локально
 
-З кореня репозиторія (бо імпортуються `database`, `models`):
+Швидка перевірка без сервера (з кореня репо):
+
+```bash
+python scripts/verify_local.py
+```
+
+Запуск API (імпортуються `database`, `models` з кореня):
 
 ```bash
 pip install -r requirements.txt
@@ -19,6 +25,8 @@ uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 ## Render
 
-У сервісі **bill-splitter-api** задайте той самий **`DATABASE_URL`**, що й у воркера бота, і випадковий **`API_SECRET`**. **`BOT_TOKEN`** для API не потрібен.
+Покроково: [docs/DEPLOY_RENDER.md](../docs/DEPLOY_RENDER.md). Коротко: у **bill-splitter-api** той самий **`DATABASE_URL`**, що й у бота, плюс **`API_SECRET`**; **`BOT_TOKEN`** не потрібен.
+
+Чеклист власника: [docs/ROADMAP.md#чеклист-власника](../docs/ROADMAP.md#чеклист-власника).
 
 Контракт: [docs/openapi/openapi.yaml](../docs/openapi/openapi.yaml).

@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- **Чеклист власника** у [ROADMAP.md](./ROADMAP.md); [DEPLOY_RENDER.md](./DEPLOY_RENDER.md); [scripts/verify_local.py](../scripts/verify_local.py); CI [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (compileall + імпорт API).
 - **FastAPI** у **`backend/`**: `GET /health`, `GET /v1/trips/{tripId}`; опційний **`API_SECRET`** + заголовок **`X-Api-Secret`** для `/v1/*`; залежності **fastapi**, **uvicorn**; **Render** — другий сервіс **web** `bill-splitter-api` у `render.yaml`; [backend/README.md](../backend/README.md), `.env.example`.
 - **OpenAPI v0.1** — [docs/openapi/openapi.yaml](./openapi/openapi.yaml) (health, parties, trips, expenses, balances, settlement); [README](./openapi/README.md); **ROADMAP**: Фаза 0 закрита по контракту, активний **Фаза 1 крок 1.2** (імплементація HTTP).
 - Закрито **RD-001…006**; оновлено **[ROADMAP.md](./ROADMAP.md)** (рішення, **Фаза 4** = PWA + стори), **[ARCHITECTURE.md](./ARCHITECTURE.md) §0.10**, **[PRODUCT.md](./PRODUCT.md)**; додано **[legal/](./legal/)** (чернетки Privacy/Terms, чеклист для юриста); README.

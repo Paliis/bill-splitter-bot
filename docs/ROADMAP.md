@@ -24,6 +24,9 @@
 | **CHANGELOG.md** | Будь-яка змістовна зміна в репозиторії (код, доки, деплой-конфіг). |
 | **legal/** | Чернетки Privacy / Terms; після правок юриста — оновити дати, плейсхолдери, URL. |
 | **openapi/** | Контракт **openapi.yaml**; при зміні полів БД або URL — оновити й узгодити з клієнтами. |
+| **DEPLOY_RENDER.md** | Інструкція двох сервісів на Render; дублює чеклист разом із **ROADMAP**. |
+| **scripts/verify_local.py** | Швидка перевірка без сервера; оновлювати, якщо змінюється структура пакетів. |
+| **.github/workflows/ci.yml** | CI на `main` / PR; додавати кроки обережно (секрети не логувати). |
 
 ---
 
@@ -80,6 +83,37 @@
 
 ---
 
+## Чеклист власника
+
+Виконуйте по черзі; що залежить лише від коду в репо, можна закрити без хостингу.
+
+### Render (прод)
+
+- [ ] У **PostgreSQL** (Render / Neon / інше) є жива БД; URI вигляду **`postgresql+asyncpg://...`** у обох сервісах.
+- [ ] **Worker** `bill-splitter-bot`: задані **`BOT_TOKEN`**, **`DATABASE_URL`**; деплой «зелений», у логах немає циклічних `TelegramConflictError` (один процес на токен).
+- [ ] **Web** `bill-splitter-api`: задані **`DATABASE_URL`** (той самий) і **`API_SECRET`**; **`BOT_TOKEN` не додавати**.
+- [ ] **Start command** Web точно: `PYTHONPATH=. uvicorn backend.main:app --host 0.0.0.0 --port $PORT` (як у [render.yaml](../render.yaml)).
+- [ ] Відкрити **публічний URL** API: `GET /health` → `{"status":"ok"}`.
+- [ ] Перевірити `GET /v1/trips/<існуючий_id>` із заголовком **`X-Api-Secret`** → JSON поїздки або очікуваний **404**.
+
+Детальніше: [DEPLOY_RENDER.md](./DEPLOY_RENDER.md).
+
+### Локально (розробка)
+
+- [ ] Python **3.11** (див. [runtime.txt](../runtime.txt)); `pip install -r requirements.txt`.
+- [ ] З кореня репо: `python scripts/verify_local.py` (або вручну `PYTHONPATH=.` + імпорт з [backend/README.md](../backend/README.md)).
+- [ ] Запуск API: `PYTHONPATH=. uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000`; перевірити `/health` і за потреби `/v1/trips/...`.
+
+### Автоперевірка в репозиторії
+
+- Після push на **`main`**: workflow **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** — `compileall`, імпорт `backend.main` (GitHub Actions; не потребує ваших секретів).
+
+### Юридичне (коли виходите в публічний PWA / стори)
+
+- [ ] Заповнити плейсхолдери в **[legal/](./legal/)** і пройти **рев’ю юриста** (див. [legal/README.md](./legal/README.md)).
+
+---
+
 ## Рішення (колишні RD)
 
 | ID | Питання | Статус | Рішення / коментар |
@@ -103,5 +137,6 @@
 | 2026-03-27 | Закрито RD-001…006; додано **legal/**; **Фаза 4** уточнена (PWA + стори); активний крок → OpenAPI / v1. |
 | 2026-03-27 | Додано **docs/openapi/**; Фаза 0 закрита по контракту; **Фаза 1 крок 1.2** — імплементація HTTP. |
 | 2026-03-27 | Схема **A** на Render: worker + **web** `bill-splitter-api`; **backend/main.py**, `API_SECRET`, оновлено **render.yaml**. |
+| 2026-03-27 | **Чеклист власника** у ROADMAP; **DEPLOY_RENDER.md**; **scripts/verify_local.py**; **GitHub Actions CI**. |
 
 *При оновленні додавайте рядок з датою і одним реченням.*
