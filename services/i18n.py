@@ -71,7 +71,7 @@ STRINGS: dict[Locale, dict[str, str]] = {
         "exp.enter_amount": "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>).",
         "exp.enter_amount_hint": (
             "💸 Введіть <b>суму</b> витрати (наприклад <code>100</code> або <code>50.25</code>). "
-            "Можна надіслати лише число або число з текстом після нього.\n"
+            "Можна одним рядком: <code>100 кава</code> або <code>Кава 100</code>.\n"
             "Або одним рядком: <code>/spent 250.50 Кава</code>.\n"
             "Щоб вийти і не заважати чату: <code>/cancel</code> або <code>/menu</code>."
         ),
@@ -205,7 +205,7 @@ STRINGS: dict[Locale, dict[str, str]] = {
         "exp.enter_amount": "💸 Enter the expense <b>amount</b> (e.g. <code>100</code> or <code>50.25</code>).",
         "exp.enter_amount_hint": (
             "💸 Enter the expense <b>amount</b> (e.g. <code>100</code> or <code>50.25</code>). "
-            "You can send just the number, or a number followed by text.\n"
+            "One line works too: <code>100 coffee</code> or <code>Coffee 100</code>.\n"
             "Or in one line: <code>/spent 25.50 Coffee</code>.\n"
             "To exit and not spam the group: <code>/cancel</code> or <code>/menu</code>."
         ),

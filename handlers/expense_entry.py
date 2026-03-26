@@ -62,31 +62,56 @@ _AMOUNT_TOKEN = re.compile(r"\d+(\.\d+)?")
 _LETTERS_RE = re.compile(r"[a-zA-Zа-яА-ЯіїєґІЇЄҐ]")
 
 
-def _parse_amount_text(text: str) -> Decimal | None:
-    t = (text or "").strip()
-    if not t:
+def _token_as_amount(tok: str) -> Decimal | None:
+    raw = tok.replace(",", ".").strip().rstrip(".,;: ")
+    if not raw or not _AMOUNT_TOKEN.fullmatch(raw):
         return None
-    compact = t.replace(",", ".").replace(" ", "")
-    if _AMOUNT_TOKEN.fullmatch(compact):
-        raw = compact
-    else:
-        parts = t.split()
-        first = (parts[0].replace(",", ".") if parts else "").strip()
-        if not _AMOUNT_TOKEN.fullmatch(first):
-            return None
-        raw = first
     amt = Decimal(raw).quantize(Decimal("0.01"))
     if amt <= 0:
         return None
     return amt
 
 
+def _parse_amount_and_tail(text: str) -> tuple[Decimal | None, str]:
+    """Сума + необовʼязковий текст (опис) з того ж рядка.
+
+    Підтримка «100», «100 кава», «Кава 100», «50.25 таксі».
+    """
+    t = (text or "").strip()
+    if not t:
+        return None, ""
+    parts = t.split()
+    compact = t.replace(",", ".").replace(" ", "")
+    if _AMOUNT_TOKEN.fullmatch(compact):
+        amt = Decimal(compact).quantize(Decimal("0.01"))
+        if amt <= 0:
+            return None, ""
+        return amt, ""
+
+    if not parts:
+        return None, ""
+
+    first_amt = _token_as_amount(parts[0])
+    if first_amt is not None:
+        tail = " ".join(parts[1:]).strip()
+        return first_amt, tail
+
+    last_amt = _token_as_amount(parts[-1])
+    if last_amt is not None:
+        head = " ".join(parts[:-1]).strip()
+        return last_amt, head
+
+    return None, ""
+
+
 def _looks_like_casual_chat_while_waiting_amount(text: str) -> bool:
     t = (text or "").strip()
     if not t:
         return False
-    first = t.split()[0].replace(",", ".") if t.split() else ""
-    if _AMOUNT_TOKEN.fullmatch(first):
+    parts = t.split()
+    if not parts:
+        return False
+    if _token_as_amount(parts[0]) is not None or _token_as_amount(parts[-1]) is not None:
         return False
     if len(t) > 40:
         return True
@@ -187,13 +212,16 @@ async def cmd_spent(
 @router.message(ExpenseSG.waiting_amount, F.text, ~F.text.startswith("/"))
 async def on_expense_amount(message: Message, state: FSMContext, session: AsyncSession, locale: Locale) -> None:
     raw_text = message.text or ""
-    amt = _parse_amount_text(raw_text)
+    amt, desc_same_line = _parse_amount_and_tail(raw_text)
     if amt is None:
         if _looks_like_casual_chat_while_waiting_amount(raw_text):
             await state.clear()
             await message.reply(tr(locale, "exp.abandon_casual"), parse_mode=ParseMode.HTML)
         else:
             await message.reply(tr(locale, "exp.bad_amount"), parse_mode=ParseMode.HTML)
+        return
+    if desc_same_line:
+        await begin_expense_participant_selection(message, state, session, amt, desc_same_line, locale)
         return
     await state.update_data(pending_amount=str(amt))
     await state.set_state(ExpenseSG.waiting_description)
