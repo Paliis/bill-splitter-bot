@@ -4,3 +4,5 @@ aiosqlite>=0.19
 asyncpg>=0.29
 python-dotenv>=1.0
 greenlet>=3.0.3
+fastapi>=0.115,<1
+uvicorn[standard]>=0.32,<1

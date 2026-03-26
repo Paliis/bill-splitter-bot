@@ -32,8 +32,8 @@
 | Поле | Значення |
 |------|----------|
 | **Фаза** | **1 — Ядро API** |
-| **Крок** | **1.1** Скелет OpenAPI **[docs/openapi/openapi.yaml](./openapi/openapi.yaml)** готовий. |
-| **Наступна дія** | **1.2** Додати в репо **HTTP-сервіс** (FastAPI): `GET /health`, потім read-only **GET /v1/trips/{tripId}`** + БД як у бота. |
+| **Крок** | **1.2** FastAPI у **[backend/](../backend/)**: `GET /health`, `GET /v1/trips/{tripId}`; Render **Web** `bill-splitter-api` у [render.yaml](../render.yaml). |
+| **Наступна дія** | **1.3** Розширити API (members, expenses, balances) + **JWT** або Telegram bridge замість `X-Api-Secret` для публічного PWA. |
 
 *Після переходу на Фазу 1 оновіть таблицю вище (фаза, крок, наступна дія).*
 
@@ -50,7 +50,8 @@
 
 ### Фаза 1 — Ядро: HTTP API + спільний домен з ботом
 
-- [ ] Виділити/імплементувати **REST API v1** (party/trip, members, expenses, balances, settle) на існуючій БД або з міграціями.
+- [x] Каркас FastAPI: `GET /health`, `GET /v1/trips/{tripId}` ([backend/main.py](../backend/main.py)); опційний **`X-Api-Secret`** якщо задано **`API_SECRET`**.
+- [ ] Решта **REST API v1** за OpenAPI (members, expenses, balances, settlement, …).
 - [ ] **Settlement** — той самий алгоритм, що й у боті (мінімізація переказів); покрити тестами.
 - [ ] **Бот** або викликає API, або спільний сервісний шар без дублювання правил (узгодити на кроці імплементації після RD).
 - [ ] **Авторизація API**: заготовка під JWT та мапінг Telegram → `user_id` (мінімум для внутрішніх викликів).
@@ -101,5 +102,6 @@
 | 2026-03-26 | Перша версія: фази 0–4, артефакти, RD-001–006, активний етап = Фаза 0. |
 | 2026-03-27 | Закрито RD-001…006; додано **legal/**; **Фаза 4** уточнена (PWA + стори); активний крок → OpenAPI / v1. |
 | 2026-03-27 | Додано **docs/openapi/**; Фаза 0 закрита по контракту; **Фаза 1 крок 1.2** — імплементація HTTP. |
+| 2026-03-27 | Схема **A** на Render: worker + **web** `bill-splitter-api`; **backend/main.py**, `API_SECRET`, оновлено **render.yaml**. |
 
 *При оновленні додавайте рядок з датою і одним реченням.*

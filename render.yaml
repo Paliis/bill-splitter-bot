@@ -1,5 +1,5 @@
 # https://render.com/docs/blueprint-spec
-# У дашборді Render: BOT_TOKEN, DATABASE_URL; опційно SUPPORT_MONO_URL, SUPPORT_BUYMEACOFFEE_URL, SUPPORT_FEEDBACK_URL.
+# Worker: BOT_TOKEN + DATABASE_URL. Web (API): DATABASE_URL + API_SECRET; BOT_TOKEN не потрібен.
 
 services:
   - type: worker
@@ -20,4 +20,18 @@ services:
       - key: SUPPORT_BUYMEACOFFEE_URL
         sync: false
       - key: SUPPORT_FEEDBACK_URL
+        sync: false
+
+  - type: web
+    name: bill-splitter-api
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: API_SECRET
         sync: false

@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- **FastAPI** у **`backend/`**: `GET /health`, `GET /v1/trips/{tripId}`; опційний **`API_SECRET`** + заголовок **`X-Api-Secret`** для `/v1/*`; залежності **fastapi**, **uvicorn**; **Render** — другий сервіс **web** `bill-splitter-api` у `render.yaml`; [backend/README.md](../backend/README.md), `.env.example`.
 - **OpenAPI v0.1** — [docs/openapi/openapi.yaml](./openapi/openapi.yaml) (health, parties, trips, expenses, balances, settlement); [README](./openapi/README.md); **ROADMAP**: Фаза 0 закрита по контракту, активний **Фаза 1 крок 1.2** (імплементація HTTP).
 - Закрито **RD-001…006**; оновлено **[ROADMAP.md](./ROADMAP.md)** (рішення, **Фаза 4** = PWA + стори), **[ARCHITECTURE.md](./ARCHITECTURE.md) §0.10**, **[PRODUCT.md](./PRODUCT.md)**; додано **[legal/](./legal/)** (чернетки Privacy/Terms, чеклист для юриста); README.
 - **[ARCHITECTURE.md](./ARCHITECTURE.md) §0** — закриті «відкриті питання»: **party** (не лише tg chat), статуси поїздки, **settlement** з мінімізацією з MVP, **валюта на кожну поїздку**, **locale на користувача + сесійне перевизначення**, лінкування провайдерів, dashboard **без сумування різних валют**, **Confirm payment** як позначка (не шлюз), **DnD учасників** після MVP; **PRODUCT.md** — узгоджені цілі для мови/валюти.
